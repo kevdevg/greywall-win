@@ -8,7 +8,7 @@ BINARY_UNIX=$(BINARY_NAME)_unix
 TUN2SOCKS_VERSION=v2.5.2
 TUN2SOCKS_BIN_DIR=internal/sandbox/bin
 
-.PHONY: all build build-ci build-linux test test-ci clean deps install-lint-tools setup setup-ci run fmt lint release release-minor download-tun2socks help
+.PHONY: all build build-ci build-linux build-tray test test-ci clean deps install-lint-tools setup setup-ci run fmt lint release release-minor download-tun2socks help
 
 all: build
 
@@ -71,6 +71,17 @@ build-darwin:
 	@echo "Building for macOS..."
 	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 $(GOBUILD) -o $(BINARY_NAME)_darwin -v ./cmd/greywall
 
+build-tray:
+	@echo "Building greywall-tray (requires CGO)..."
+	CGO_ENABLED=1 $(GOBUILD) -o $(BINARY_NAME)-tray -v ./cmd/greywall-tray
+ifeq ($(shell uname),Darwin)
+	@echo "Creating macOS app bundle..."
+	@mkdir -p Greywall.app/Contents/MacOS
+	@cp $(BINARY_NAME)-tray Greywall.app/Contents/MacOS/greywall-tray
+	@cp cmd/greywall-tray/Info.plist Greywall.app/Contents/Info.plist
+	@echo "Run with: open Greywall.app"
+endif
+
 install-lint-tools:
 	@echo "Installing linting tools..."
 	go install mvdan.cc/gofumpt@latest
@@ -109,6 +120,7 @@ help:
 	@echo "  build-ci           - Build for CI with version info"
 	@echo "  build-linux        - Build for Linux"
 	@echo "  build-darwin       - Build for macOS"
+	@echo "  build-tray         - Build greywall-tray (systray, requires CGO)"
 	@echo "  download-tun2socks - Download tun2socks binaries for embedding"
 	@echo "  test               - Run tests"
 	@echo "  test-ci            - Run tests for CI with coverage"

@@ -35,3 +35,38 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+  build-tray:
+    needs: goreleaser
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Build and package tray for macOS
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          
+          # Build for AMD64
+          CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -o greywall-tray-amd64/greywall-tray ./cmd/greywall-tray
+          tar -czf greywall-tray_${VERSION}_Darwin_x86_64.tar.gz -C greywall-tray-amd64 greywall-tray
+          
+          # Build for ARM64
+          CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -o greywall-tray-arm64/greywall-tray ./cmd/greywall-tray
+          tar -czf greywall-tray_${VERSION}_Darwin_arm64.tar.gz -C greywall-tray-arm64 greywall-tray
+      - name: Upload to Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Download existing checksums.txt from goreleaser
+          gh release download ${{ github.ref_name }} --pattern checksums.txt || touch checksums.txt
+          
+          # Append tray hashes
+          shasum -a 256 greywall-tray_*_Darwin_*.tar.gz >> checksums.txt
+          
+          # Upload everything, clobbering the old checksums.txt
+          gh release upload ${{ github.ref_name }} greywall-tray_*_Darwin_*.tar.gz checksums.txt --clobber
