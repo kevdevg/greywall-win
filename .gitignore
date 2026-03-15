@@ -33,3 +33,5 @@ mem.out
 internal/sandbox/bin/tun2socks-*
 tun2socks/
 
+# macOS App Bundle
+Greywall.app/
