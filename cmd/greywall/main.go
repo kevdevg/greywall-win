@@ -20,6 +20,7 @@ import (
 	_ "github.com/GreyhavenHQ/greywall/internal/profiles/toolchains" // register built-in toolchain profiles
 	"github.com/GreyhavenHQ/greywall/internal/proxy"
 	"github.com/GreyhavenHQ/greywall/internal/sandbox"
+	"github.com/GreyhavenHQ/greywall/internal/tray"
 	"github.com/spf13/cobra"
 )
 
@@ -125,6 +126,7 @@ Configuration file format:
 	rootCmd.AddCommand(newProfilesCmd())
 	rootCmd.AddCommand(newCheckCmd())
 	rootCmd.AddCommand(newSetupCmd())
+	rootCmd.AddCommand(newTrayCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -625,7 +627,7 @@ func runSetup(_ *cobra.Command, _ []string) error {
 			})
 		}
 		fmt.Printf("greyproxy is already installed (v%s) and running.\n", status.Version)
-		fmt.Printf("Run 'greywall check' for full status.\n")
+		tray.Run(tray.Config{Version: version})
 		return nil
 	}
 
@@ -634,6 +636,7 @@ func runSetup(_ *cobra.Command, _ []string) error {
 			return err
 		}
 		fmt.Printf("greyproxy started.\n")
+		tray.Run(tray.Config{Version: version})
 		return nil
 	}
 
@@ -647,6 +650,20 @@ func runSetup(_ *cobra.Command, _ []string) error {
 	return proxy.Install(proxy.InstallOptions{
 		Output: os.Stderr,
 	})
+}
+
+// newTrayCmd creates the tray subcommand for the system tray icon.
+func newTrayCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "tray",
+		Short: "Start the Greywall system tray icon",
+		Long:  `Starts a system tray icon showing greyproxy status with quick access to the dashboard.`,
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			tray.Run(tray.Config{Version: version})
+			return nil
+		},
+	}
 }
 
 // newCompletionCmd creates the completion subcommand for shell completions.
